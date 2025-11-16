@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSBridge Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#8B5CF6',
+                        dark: '#1E293B',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .btn-effect {
+                @apply transform transition-all duration-300 ease-out;
+            }
+            .btn-hover {
+                @apply hover:-translate-y-1 hover:shadow-lg;
+            }
+            .btn-active {
+                @apply active:translate-y-0 active:shadow;
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen font-inter flex flex-col items-center justify-center p-4 gap-6">
+    <div class="text-center mb-8">
+        <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-dark mb-2">JSBridge 功能演示</h1>
+        <p class="text-slate-500 max-w-md mx-auto">点击下方按钮测试不同的JSBridge调用方式</p>
+    </div>
+
+    <div class="w-full max-w-md grid gap-4">
+        <button type="button" onclick="getName()"
+            class="bg-primary text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+            <i class="fa fa-user-circle-o text-xl group-hover:scale-110 transition-transform"></i>
+            <span>获取用户名</span>
+        </button>
+
+        <button type="button" onclick="login()"
+            class="bg-secondary text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+            <i class="fa fa-sign-in text-xl group-hover:scale-110 transition-transform"></i>
+            <span>用户登录</span>
+        </button>
+
+        <button type="button" onclick="callback()"
+            class="bg-accent text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+            <i class="fa fa-exchange text-xl group-hover:scale-110 transition-transform"></i>
+            <span>测试回调</span>
+        </button>
+        <button type="button" onclick="noS()"
+            class="bg-accent text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+            <i class="fa fa-exchange text-xl group-hover:scale-110 transition-transform"></i>
+            <span>服务不存在</span>
+        </button>
+
+        <button type="button" onclick="noM()"
+            class="bg-accent text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+            <i class="fa fa-exchange text-xl group-hover:scale-110 transition-transform"></i>
+            <span>函数不存在</span>
+        </button>
+    </div>
+
+    <div id="demo"
+        class="mt-8 p-4 bg-white rounded-lg shadow-md min-h-[60px] w-full max-w-md flex items-center justify-center text-slate-600">
+    </div>
+
+    <script>
+        function getName() {
+            let a = JSON.stringify(App.callNative({
+                service: 'JSBridgeUserService',
+                method: 'getName',
+                args: {
+                    xxx: 'abcde'
+                }
+            }))
+            console.log(a);
+
+        }
+
+        function login() {
+            App.callNative({
+                service: 'JSBridgeUserService',
+                method: 'login',
+                args: {
+                    str: '登录成功'
+                }
+            })
+                .then((a) => {
+                 console.log(JSON.stringify(a));
+                 a.data()
+
+                })
+        }
+
+        function callback() {
+            App.callNative({
+                service: 'JSBridgeUserService',
+                method: 'callback',
+                args: {
+                    fun: (str) => {
+                    str.data()
+                    //    console.log('callback：' + str);
+                    }
+                }
+            })
+        }
+
+        function noS() {
+            let a = JSON.stringify(App.callNative({
+                service: 'xxx',
+                method: 'callback',
+            }))
+            console.log(a);
+
+        }
+
+        function noM() {
+            let a = JSON.stringify(App.callNative({
+                service: 'JSBridgeUserService',
+                method: 'xxx',
+
+            }))
+            console.log(a);
+
+        }
+    </script>
+</body>
+
+</html>
