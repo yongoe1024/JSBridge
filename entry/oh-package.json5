@@ -6,7 +6,7 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "jsbridge": "file:../jsbridge"
+    "@lyzone/jsbridge": "file:../jsbridge"
   }
 }
 

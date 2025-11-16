@@ -1,9 +1,17 @@
 {
-  "name": "jsbridge",
+  "name": "@lyzone/jsbridge",
   "version": "1.0.0",
-  "description": "Please describe the basic information.",
+  "description": "一个鸿蒙web的js桥，简单好用",
   "main": "Index.ets",
-  "author": "",
+  "author": "yongoe",
+  "homepage": "https://github.com/yongoe1024",
+  "repository": "https://gitee.com/yongoe/RdbPlus",
   "license": "Apache-2.0",
-  "dependencies": {}
+  "dependencies": {},
+  "keywords": [
+    "Web",
+    "JSBridge",
+    "WebView",
+    "JavaScript"
+  ]
 }
