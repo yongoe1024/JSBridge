@@ -1,0 +1,17 @@
+{
+  "name": "@dims/jsbridge",
+  "version": "1.0.0",
+  "description": "一个鸿蒙web的js桥，简单好用",
+  "main": "Index.ets",
+  "author": "yongoe",
+  "homepage": "https://github.com/yongoe1024",
+  "repository": "https://gitee.com/yongoe/RdbPlus",
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "keywords": [
+    "Web",
+    "JSBridge",
+    "WebView",
+    "JavaScript"
+  ]
+}

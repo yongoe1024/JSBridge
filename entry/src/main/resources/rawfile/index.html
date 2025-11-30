@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSBridge Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+  </head>
+
+  <body
+    class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen font-inter flex flex-col items-center justify-center p-4 gap-6">
+    <div class="text-center mb-8">
+      <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-dark mb-2">JSBridge 功能演示</h1>
+      <p class="text-slate-500 max-w-md mx-auto">点击下方按钮测试同步调用方式</p>
+    </div>
+
+    <div class="w-full max-w-md grid gap-4">
+      <button
+        type="button"
+        onclick="fun1()"
+        class="bg-primary text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+        <i class="fa fa-user-circle-o text-xl group-hover:scale-110 transition-transform"></i>
+        <span>普通调用</span>
+      </button>
+
+      <button
+        type="button"
+        onclick="fun2()"
+        class="bg-accent text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+        <i class="fa fa-exchange text-xl group-hover:scale-110 transition-transform"></i>
+        <span>web侧执行鸿蒙提供的回调函数(收到带函数的obj对象)</span>
+      </button>
+      <button
+        type="button"
+        onclick="fun3()"
+        class="bg-accent text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+        <i class="fa fa-exchange text-xl group-hover:scale-110 transition-transform"></i>
+        <span>鸿蒙侧执行js提供的回调函数</span>
+      </button>
+
+      <button
+        type="button"
+        onclick="fun4()"
+        class="bg-accent text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+        <i class="fa fa-exchange text-xl group-hover:scale-110 transition-transform"></i>
+        <span>函数不存在</span>
+      </button>
+
+      <button
+        type="button"
+        onclick="fun5()"
+        class="bg-accent text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+        <i class="fa fa-exchange text-xl group-hover:scale-110 transition-transform"></i>
+        <span>服务不存在</span>
+      </button>
+    </div>
+
+    <div class="text-center mb-8">
+      <p class="text-slate-500 max-w-md mx-auto">点击下方按钮测试异步调用方式</p>
+    </div>
+
+    <div class="w-full max-w-md grid gap-4">
+      <button
+        type="button"
+        onclick="asyncfun1()"
+        class="bg-primary text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+        <i class="fa fa-user-circle-o text-xl group-hover:scale-110 transition-transform"></i>
+        <span>异步基本调用</span>
+      </button>
+
+      <button
+        type="button"
+        onclick="asyncfun2()"
+        class="bg-secondary text-white font-medium py-3 px-6 rounded-xl shadow btn-effect btn-hover btn-active flex items-center justify-center gap-2 group">
+        <i class="fa fa-sign-in text-xl group-hover:scale-110 transition-transform"></i>
+        <span>异步web侧执行鸿蒙提供的回调函数(收到带函数的obj对象)</span>
+      </button>
+    </div>
+
+    <script>
+      function fun1() {
+        let a = App.callNative({
+          service: 'JSBridgeUserService',
+          method: 'fun1',
+          args: '我是js入参'
+        })
+        alert('调用成功：' + JSON.stringify(a))
+      }
+
+      function fun2() {
+        let a = App.callNative({
+          service: 'JSBridgeUserService',
+          method: 'fun2'
+        })
+        a.testFun('来自js的入参')
+      }
+
+      function fun3() {
+        App.callNative({
+          service: 'JSBridgeUserService',
+          method: 'fun3',
+          args: str => {
+            alert('调用成功：' + str)
+          }
+        })
+      }
+
+      function fun4() {
+        let a = App.callNative({
+          service: 'JSBridgeUserService',
+          method: 'not'
+        })
+        alert(JSON.stringify(a))
+      }
+
+      function fun5() {
+        let a = App.callNative({
+          service: 'not',
+          method: 'not'
+        })
+        alert(JSON.stringify(a))
+      }
+
+      function asyncfun1() {
+        App.callNative({
+          service: 'JSBridgeUserService',
+          method: 'asyncfun1',
+          args: '来自js的入参'
+        }).then(a => {
+          alert(JSON.stringify(a))
+        })
+      }
+
+      function asyncfun2() {
+        App.callNative({
+          service: 'JSBridgeUserService',
+          method: 'asyncfun2'
+        }).then(a => {
+          a.testFun('来自js的入参')
+        })
+      }
+    </script>
+  </body>
+</html>
