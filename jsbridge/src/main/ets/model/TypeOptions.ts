@@ -1,3 +1,1 @@
-import { BaseJSBridgeService } from "../service/BaseJSBridgeService";
-
-export type JSBridgeClass = new () => BaseJSBridgeService
+export type JSBridgeClass<T = object> = new () => T;

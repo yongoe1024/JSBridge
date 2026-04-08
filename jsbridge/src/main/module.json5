@@ -3,7 +3,8 @@
     "name": "jsbridge",
     "type": "har",
     "deviceTypes": [
-      "default"
+      "default",
+      "tablet"
     ]
   }
 }

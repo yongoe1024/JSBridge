@@ -25,7 +25,6 @@ struct WebView {
 
   aboutToDisappear(): void {
     this.controller.deleteJavaScriptRegister('App')
-    this.jsBridgeManager.clear()
   }
 
   onBackPress(): boolean | void {
