@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSBridge · 同步调用</title>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/styles.css" />
+</head>
+
+<body>
+    <div class="shell">
+        <section class="hero">
+            <a class="eyebrow" href="index.html">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                <span>返回首页</span>
+            </a>
+            <h1>同步调用</h1>
+            <p>
+                点击按钮后会在下方结果面板中显示调用结果。
+            </p>
+        </section>
+
+        <div class="content">
+            <main class="panel">
+                <div class="panel-title">
+                    <h2>功能操作台</h2>
+                    <span>同步调用直接返回 H5Result</span>
+                </div>
+
+                <section class="section">
+                    <div class="button-grid">
+                        <button type="button" class="action-button action-sync" onclick="fun1()">
+                            <span>
+                                <span class="action-title">普通调用</span>
+                                <span class="action-desc">调用 `fun1`</span>
+                            </span>
+                        </button>
+
+                        <button type="button" class="action-button action-sync-fail" onclick="fun1Err()">
+                            <span>
+                                <span class="action-title">普通调用失败态</span>
+                                <span class="action-desc">调用 `fun1Err`</span>
+                            </span>
+                        </button>
+
+                        <button type="button" class="action-button action-method-missing" onclick="fun4()">
+                            <span>
+                                <span class="action-title">函数不存在</span>
+                                <span class="action-desc">调用未注册方法</span>
+                            </span>
+                        </button>
+
+                        <button type="button" class="action-button action-service-missing" onclick="fun5()">
+                            <span>
+                                <span class="action-title">服务不存在</span>
+                                <span class="action-desc">调用未注册服务</span>
+                            </span>
+                        </button>
+                    </div>
+                </section>
+
+
+            </main>
+
+            <aside class="panel">
+                <div class="panel-title">
+                    <h2>说明面板</h2>
+                    <span>同步调用要点</span>
+                </div>
+
+                <div class="aside-card">
+                    <h3>预期结果</h3>
+                    <ul>
+                        <li>普通调用：code=200，返回结果对象。</li>
+                        <li>失败态：code=500</li>
+                        <li>函数不存在：返回「方法不存在」错误码（-2）。</li>
+                        <li>服务不存在：返回「服务不存在」错误码（-1）。</li>
+                    </ul>
+                </div>
+
+                <div class="result-panel">
+                    <div class="result-header">
+                        <h3>日志</h3>
+                        <button type="button" onclick="clearResult()">清空</button>
+                    </div>
+                    <pre id="result">等待操作...</pre>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script src="assets/bridge.js"></script>
+    <script>
+        function fun1() {
+            // 参数仅作为演示，未使用
+            var result = call('JSBridgeUserService', 'fun1', '传给鸿蒙的参数')
+            showResult(result);
+        }
+
+        function fun1Err() {
+            var result = call('JSBridgeUserService', 'fun1Err')
+            showResult(result);
+        }
+
+        function fun4() {
+            var result = call('JSBridgeUserService', 'not')
+            showResult(result);
+        }
+
+        function fun5() {
+            var result = call('not', 'not')
+            showResult(result);
+        }
+    </script>
+</body>
+
+</html>

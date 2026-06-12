@@ -1,78 +1,78 @@
 # JSBridge
 
-轻量级 JSBridge，使用装饰器完成映射，操作简单。  
-联系邮箱 121887765@qq.com
+> 轻量级 HarmonyOS WebView JSBridge，基于装饰器完成「服务 / 方法」映射，让 H5 像调用本地函数一样调用鸿蒙原生能力。
 
-## 特性
+[![ohpm](https://img.shields.io/badge/ohpm-%40dims%2Fjsbridge-blue)](https://ohpm.openharmony.cn/#/cn/detail/@dims%2Fjsbridge)
+![version](https://img.shields.io/badge/version-2.0.0-green)
+![license](https://img.shields.io/badge/license-Apache--2.0-lightgrey)
 
-- 基于 `@JSBridgeService` 和 `@JSBridgeMethod` 装饰器完成服务与方法映射
-- 支持 Web 调用鸿蒙侧同步方法
-- 支持 Web 调用鸿蒙侧异步方法
-- 支持鸿蒙侧返回普通对象、回调函数
-- 支持鸿蒙侧主动执行 H5 传入的回调函数
-- 内置基础错误码，便于区分服务不存在、方法不存在、执行失败等场景
-- 禁止重复注册同名服务，避免运行时映射冲突
+- 包名：`@dims/jsbridge`
+- 当前版本：**2.0.0**（更新记录见 [`jsbridge/CHANGELOG.md`](./jsbridge/CHANGELOG.md)）
+- 联系邮箱：121887765@qq.com
 
-## 下载安装
+## 这是什么
 
-1. 安装最新版 `ohpm i @dims/jsbridge`
-2. 升级版本 `ohpm update @dims/jsbridge`，建议使用最新版避免bug
+`@dims/jsbridge` 是一套面向 ArkWeb（HarmonyOS WebView）的双向通信桥。鸿蒙侧用
+`@JSBridgeService` / `@JSBridgeMethod` 把类和方法声明为「桥接服务」，H5 侧通过一个注入对象
+（默认名 `App`）的统一入口 `callNative({ service, method, args })` 调用，支持：
 
-OpenHarmony ohpm
-环境配置等更多内容，请参考[如何安装 OpenHarmony ohpm 包](https://ohpm.openharmony.cn/#/cn/help/downloadandinstall)
+- ✅ H5 调用鸿蒙**同步**方法，直接拿到 `H5Result`
+- ✅ H5 调用鸿蒙**异步**方法，通过 `Promise` 的 `.then` / `.catch` 拿结果
+- ✅ 鸿蒙返回**包含函数**的对象，H5 调用其中的函数（函数代理）
+- ✅ 鸿蒙**主动执行** H5 通过 `args` 传入的回调函数（函数透传）
+- ✅ 内置错误码，区分「服务不存在 / 方法不存在 / 执行失败」
+- ✅ 禁止重复注册同名服务，避免运行时映射冲突
 
-[工程版本升级教程](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ide-integrated-project-migration)
+## 仓库结构
 
-## 完整流程
+这是一个 DevEco Studio 工程，包含一个发布库和一个演示 App：
 
-### 1. 定义桥接服务
+| 目录 | 说明 |
+| --- | --- |
+| [`jsbridge/`](./jsbridge) | **库源码**，即发布到 ohpm 的 `@dims/jsbridge`。完整 API 与用法见 [`jsbridge/README.md`](./jsbridge/README.md) |
+| [`entry/`](./entry) | **演示 App**，通过 `file:../jsbridge` 本地依赖该库，演示同步 / 异步 / 回调三类交互 |
+| `entry/.../JSBridge/JSBridgeUserService.ets` | 示例桥接服务（`fun1` / `fun2` / `fun3` / `asyncFun1` …） |
+| `entry/.../pages/WebView.ets` | 在页面中注册服务并 `registerJavaScriptProxy` 注入到 Web |
+| `entry/.../resources/rawfile/` | 演示用 H5 页面（`index` / `sync` / `callback` / `async`）与共享脚本 `assets/bridge.js` |
 
-使用 `@JSBridgeService` 标记一个桥接服务，使用 `@JSBridgeMethod` 暴露 H5 可调用的方法。
+## 安装
+
+```bash
+ohpm i @dims/jsbridge
+```
+
+升级到最新版（建议保持最新以规避已知问题）：
+
+```bash
+ohpm update @dims/jsbridge
+```
+
+ohpm 环境配置参考 [如何安装 OpenHarmony ohpm 包](https://ohpm.openharmony.cn/#/cn/help/downloadandinstall)。
+
+## 快速开始
+
+> 完整教程（自定义方法名、函数代理、函数透传、错误处理等）见 **[`jsbridge/README.md`](./jsbridge/README.md)**。
+
+**1. 定义桥接服务**（鸿蒙侧）
 
 ```ts
-import {
-  H5Code, H5Params, H5Result, JSBridgeMethod, JSBridgeService
-} from '@dims/jsbridge'
+import { H5Code, H5Params, H5Result, JSBridgeMethod, JSBridgeService } from '@dims/jsbridge'
 
 @JSBridgeService('JSBridgeUserService')
 export class JSBridgeUserService {
   @JSBridgeMethod()
   fun1(entity: H5Params): H5Result {
-    return {
-      code: H5Code.SUCCESS,
-      data: '来自鸿蒙侧返回结果'
-    }
-  }
-
-  @JSBridgeMethod('getUserInfo')
-  fun2(entity: H5Params): H5Result {
-    return {
-      code: H5Code.SUCCESS,
-      data: {
-        name: 'Tom'
-      }
-    }
+    return { code: H5Code.SUCCESS, data: '来自鸿蒙侧的返回结果' }
   }
 
   @JSBridgeMethod()
   async asyncFun1(entity: H5Params): Promise<H5Result> {
-    return {
-      code: H5Code.SUCCESS,
-      data: '来自鸿蒙异步函数返回结果'
-    }
+    return { code: H5Code.SUCCESS, data: '来自鸿蒙异步函数的返回结果' }
   }
 }
 ```
 
-说明：
-
-- `@JSBridgeService('JSBridgeUserService')` 中的名称，就是 H5 调用时的 `service`
-- `@JSBridgeMethod('getUserInfo')` 可以给 H5 暴露一个自定义方法名
-- 如果 `@JSBridgeMethod()` 不传参，则默认使用真实函数名作为 H5 调用名
-
-### 2. 注册到 WebView
-
-在页面中创建 `JSBridgeManager`，注册服务，再通过 `registerJavaScriptProxy` 注入到 Web。
+**2. 注册并注入到 WebView**（鸿蒙侧）
 
 ```ts
 import { JSBridgeManager } from '@dims/jsbridge'
@@ -104,221 +104,63 @@ struct WebViewPage {
 }
 ```
 
-说明：
-
-- `App` 是注入到 H5 的对象名，可按需替换
-- `callNative` 是暴露给 H5 的统一调用入口，不可修改
-- 同一个 `JSBridgeManager` 中不允许重复注册同名服务
-
-### 3. H5 调用鸿蒙方法
-
-#### 同步调用
+**3. H5 调用鸿蒙方法**（Web 侧）
 
 ```js
-var result = App.callNative({
-    service: 'JSBridgeUserService',
-    method: 'fun1',
-    args: '我是 js 入参'
-});
+// 同步
+var result = App.callNative({ service: 'JSBridgeUserService', method: 'fun1', args: 'hi' })
+console.log(result)
 
-console.log(result);
+// 异步
+App.callNative({ service: 'JSBridgeUserService', method: 'asyncFun1' })
+   .then(function (res) { console.log(res) })
+   .catch(function (err) { console.log(err) })
 ```
 
-#### 异步调用
+> `App` 是注入到 H5 的对象名，可按需替换；`callNative` 是统一调用入口，**不可修改**。
 
-```js
-App.callNative({
-    service: 'JSBridgeUserService',
-    method: 'asyncFun1',
-    args: '我是 js 入参'
-}).then(function (result) {
-    console.log(result);
-}).catch(function (error) {
-    console.log(error);
-});
-```
+## 运行演示 App
 
-#### 调用自定义方法名
+1. 用 **DevEco Studio** 打开本工程（根目录）。
+2. 等待 `ohpm` 依赖同步完成（`entry` 通过 `file:../jsbridge` 引用本地库源码，改库即时生效）。
+3. 选择 `entry` 模块，连接真机或启动模拟器后运行。
+4. 首页点击「打开 Web 演示页」进入 H5，再按需进入三个子页验证：
+   - **同步调用**：普通调用、失败态，以及方法 / 服务不存在的异常兜底；
+   - **回调交互**：执行鸿蒙返回对象中的函数，以及鸿蒙主动执行 JS 回调；
+   - **异步调用**：`Promise` 基本调用、`reject` 失败链路、异步回调对象。
 
-当鸿蒙侧使用了 `@JSBridgeMethod('getUserInfo')` 时，H5 需要按映射名调用：
+每个子页都会把调用结果写入页面底部的结果面板（新结果在最上方），便于连续调试与对比。
 
-```js
-var result = App.callNative({
-    service: 'JSBridgeUserService',
-    method: 'getUserInfo'
-});
-```
+## 实现原理（简述）
 
-### 4. 鸿蒙侧调用 H5 传入函数
+一套「基于装饰器的轻量 RPC」：
 
-```ts
-@JSBridgeMethod()
-fun3(entity: H5Params): H5Result {
-  entity.args('鸿蒙侧成功执行 h5 传入函数')
-  return {
-    code: H5Code.SUCCESS,
-    data: '来自鸿蒙的返回数据'
-  }
-}
-```
+1. **声明期**：装饰器把元数据（服务名 + 「H5 方法名 → 真实方法名」映射）写入服务类原型的 `__meta__`。
+2. **注册期**：`registerJSBridge` 读取元数据，以服务名为键登记一个**懒加载工厂**，并拒绝重复注册。
+3. **调用期**：H5 调用 `callNative`，先取（或懒创建）服务实例，再解析真实方法名，最后以**成员调用**执行，从而正确保留 `this`。
+4. **返回**：同步返回 `H5Result`，异步返回 `Promise<H5Result>`，均由 ArkWeb 代理给 H5；返回对象中的函数通过 `methodNameListForJsProxy` 声明后暴露为 H5 可调用的函数代理。
 
-```js
-App.callNative({
-    service: 'JSBridgeUserService',
-    method: 'fun3',
-    args: function (value) {
-        console.log('鸿蒙侧回调 js:', value);
-    }
-});
-```
+详细数据流与设计说明见 [`jsbridge/README.md`](./jsbridge/README.md)。
 
-### 5. 鸿蒙侧返回函数给 H5
+## 错误码
 
-如果返回对象中包含函数，需要通过 `methodNameListForJsProxy` 声明哪些字段是函数代理。
+| code | 含义 | 触发场景 |
+| --- | --- | --- |
+| `200` SUCCESS | 成功 | 业务方法正常返回 |
+| `500` FAIL | 失败 | 业务主动返回失败，或同步方法内部抛异常被框架捕获 |
+| `-1` NOT_EXIST_SERVICE | 服务不存在 | `service` 未注册 |
+| `-2` NOT_EXIST_METHOD | 方法不存在 | 服务存在，但 `method` 未通过 `@JSBridgeMethod` 暴露 |
 
-```ts
-@JSBridgeMethod()
-fun2(entity: H5Params): H5Result {
-  return {
-    code: H5Code.SUCCESS,
-    methodNameListForJsProxy: ['testFun'],
-    testFun: () => {
-      return '来自鸿蒙侧 testFun 回调返回结果'
-    },
-    other: {
-      name: '其他普通对象'
-    }
-  }
-}
-```
+> 注意：**同步**方法内部抛异常会被框架捕获并返回 `{ code: 500, msg: '执行失败' }`；
+> **异步**方法 `reject` 的错误对象会**直达 H5 的 `.catch()`**，不经过框架的 `try/catch`。
 
-```js
-var result = App.callNative({
-    service: 'JSBridgeUserService',
-    method: 'fun2'
-});
+## 文档与链接
 
-if (result && typeof result.testFun === 'function') {
-    console.log(result.testFun('来自 js 的入参'));
-}
-```
+- 📖 库完整用法与 API：[`jsbridge/README.md`](./jsbridge/README.md)
+- 📝 更新记录：[`jsbridge/CHANGELOG.md`](./jsbridge/CHANGELOG.md)
+- 📦 ohpm 包页面：[@dims/jsbridge](https://ohpm.openharmony.cn/#/cn/detail/@dims%2Fjsbridge)
+- 🔧 [工程版本升级教程](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ide-integrated-project-migration)
 
-### 6. 错误码说明
+## 许可证
 
-`H5Code` 当前定义如下：
-
-```ts
-export enum H5Code {
-  NOT_EXIST_METHOD = -2,
-  NOT_EXIST_SERVICE = -1,
-  SUCCESS = 0,
-  FAIL = 1,
-}
-```
-
-常见返回示例：
-
-```json
-{
-  "code": -1,
-  "msg": "服务不存在"
-}
-```
-
-```json
-{
-  "code": -2,
-  "msg": "方法不存在"
-}
-```
-
-同步执行过程中如果方法内部直接抛出异常，框架会返回：
-
-```json
-{
-  "code": 1,
-  "msg": "执行失败"
-}
-```
-
-异步方法返回 `Promise` 时，如果业务侧主动 `reject`，错误对象会直接进入 H5 的 `.catch()`，例如：
-
-```js
-App.callNative({
-    service: 'JSBridgeUserService',
-    method: 'asyncFun1Err'
-}).then(function (result) {
-    console.log(result);
-}).catch(function (error) {
-    console.log(error);
-    // 例如:
-    // {
-    //   code: 1,
-    //   data: '来自鸿蒙的异步函数，返回数据 Err'
-    // }
-});
-```
-
-## 最小示例
-
-### 鸿蒙侧
-
-```ts
-import {
-  H5Code, H5Params, H5Result, JSBridgeMethod, JSBridgeService
-} from '@dims/jsbridge'
-
-@JSBridgeService('DemoService')
-export class DemoService {
-  @JSBridgeMethod()
-  hello(entity: H5Params): H5Result {
-    return {
-      code: H5Code.SUCCESS,
-      data: 'hello from harmony'
-    }
-  }
-}
-```
-
-### 页面注册
-
-```ts
-import { JSBridgeManager } from '@dims/jsbridge'
-import { webview } from '@kit.ArkWeb'
-import { DemoService } from '../JSBridge/DemoService'
-
-@Entry
-@Component
-struct Index {
-  controller: webview.WebviewController = new webview.WebviewController()
-  jsBridgeManager = new JSBridgeManager()
-
-  aboutToAppear(): void {
-    this.jsBridgeManager.registerJSBridge(DemoService)
-  }
-
-  build() {
-    Web({ src: $rawfile('index.html'), controller: this.controller })
-      .javaScriptAccess(true)
-      .onControllerAttached(() => {
-        this.controller.registerJavaScriptProxy(this.jsBridgeManager, 'App', ['callNative'])
-      })
-  }
-}
-```
-
-### H5 侧
-
-```html
-
-<script>
-    var result = App.callNative({
-      service: 'DemoService',
-      method: 'hello',
-      args: 'hello from web'
-    });
-  
-    console.log(result);
-</script>
-```
- 
+[Apache-2.0](./LICENSE)

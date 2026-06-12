@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSBridge · 异步调用</title>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/styles.css" />
+</head>
+
+<body>
+    <div class="shell">
+        <section class="hero">
+            <a class="eyebrow" href="index.html">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                <span>返回首页</span>
+            </a>
+            <h1>异步调用</h1>
+            <p>
+                演示基于 Promise 的异步调用：`.then` 接收返回值、`.catch` 处理 reject 失败链路，
+                以及异步返回带函数对象、在 Web 侧执行回调。
+            </p>
+        </section>
+
+        <div class="content">
+            <main class="panel">
+                <div class="panel-title">
+                    <h2>功能操作台</h2>
+                    <span>异步调用返回 Promise&lt;H5Result&gt;</span>
+                </div>
+
+                <section class="section">
+                    <div class="button-grid">
+                        <button type="button" class="action-button action-async" onclick="asyncFun1()">
+                            <span>
+                                <span class="action-title">异步基本调用</span>
+                                <span class="action-desc">调用 `asyncFun1`，通过 Promise 接收原生返回值。</span>
+                            </span>
+                        </button>
+
+                        <button type="button" class="action-button action-async-reject" onclick="asyncFun1Err()">
+                            <span>
+                                <span class="action-title">异步失败态调用</span>
+                                <span class="action-desc">调用 `asyncFun1Err`，验证 Promise reject 异常链路。</span>
+                            </span>
+                        </button>
+
+                        <button type="button" class="action-button action-async-proxy" onclick="asyncFun2()">
+                            <span>
+                                <span class="action-title">异步回调调用</span>
+                                <span class="action-desc">异步接收带函数对象，并在 Web 侧执行回调。</span>
+                            </span>
+                        </button>
+                    </div>
+                </section>
+
+            </main>
+
+            <aside class="panel">
+                <div class="panel-title">
+                    <h2>说明面板</h2>
+                    <span>异步调用要点</span>
+                </div>
+
+                <div class="aside-card">
+                    <h3>预期结果</h3>
+                    <ul>
+                        <li>基本调用：Promise resolve，`.then` 拿到成功结果。</li>
+                        <li>失败态：Promise reject，错误直达 `.catch`。</li>
+                        <li>异步回调：`.then` 拿到含 `testFun` 的对象，Web
+                            调用后拿到其返回值。使用methodNameListForJsProxy，对象将只保留声明的函数，其他参数被清空
+                        </li>
+                    </ul>
+                </div>
+                <div class="result-panel">
+                    <div class="result-header">
+                        <h3>日志</h3>
+                        <button type="button" onclick="clearResult()">清空</button>
+                    </div>
+                    <pre id="result">等待操作...</pre>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script src="assets/bridge.js"></script>
+    <script>
+        function asyncFun1() {
+            call('JSBridgeUserService', 'asyncFun1', '传给鸿蒙的参数').then(function (result) {
+                showResult(result);
+            }).catch(function (error) {
+                showResult(error);
+            });
+        }
+
+        function asyncFun1Err() {
+            call('JSBridgeUserService', 'asyncFun1Err', '传给鸿蒙的参数').then(function (result) {
+                showResult(result);
+            }).catch(function (error) {
+                showResult(error);
+            });
+        }
+
+        function asyncFun2() {
+            call('JSBridgeUserService', 'asyncFun2').then(function (result) {
+                showResult(result);
+                if (result && typeof result.testFun === 'function') {
+                    var res = result.testFun('通知通知')
+                    showResult(res);
+                }
+            }).catch(function (error) {
+                showResult(error);
+            });
+        }
+    </script>
+</body>
+
+</html>

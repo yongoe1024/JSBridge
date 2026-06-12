@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSBridge · 回调交互</title>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/styles.css" />
+</head>
+
+<body>
+    <div class="shell">
+        <section class="hero">
+            <a class="eyebrow" href="index.html">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                <span>返回首页</span>
+            </a>
+            <h1>回调交互</h1>
+            <p>
+                演示双向回调能力：Web 执行鸿蒙返回对象中的函数（函数代理），
+                以及鸿蒙主动执行 Web 通过 args 传入的回调函数（函数透传）。
+            </p>
+        </section>
+
+        <div class="content">
+            <main class="panel">
+                <div class="panel-title">
+                    <h2>功能操作台</h2>
+                    <span>点击按钮后会在下方结果面板中显示调用结果</span>
+                </div>
+
+                <section class="section">
+                    <div class="button-grid">
+                        <button type="button" class="action-button action-proxy" onclick="fun2()">
+                            <span>
+                                <span class="action-title">fun2 Web 执行鸿蒙回调</span>
+                                <span class="action-desc">接收鸿蒙返回的对象，并执行其中的 `testFun`。</span>
+                            </span>
+                        </button>
+
+                        <button type="button" class="action-button action-callback" onclick="fun3()">
+                            <span>
+                                <span class="action-title">fun3 鸿蒙执行 JS 回调</span>
+                                <span class="action-desc">将 JS 函数传给原生侧，由原生主动回调执行。</span>
+                            </span>
+                        </button>
+                    </div>
+                </section>
+
+
+            </main>
+
+            <aside class="panel">
+                <div class="panel-title">
+                    <h2>说明面板</h2>
+                    <span>回调交互要点</span>
+                </div>
+
+                <div class="aside-card">
+                    <h3>预期结果</h3>
+                    <ul>
+                        <li>函数代理：鸿蒙返回对象中含
+                            `testFun`。使用methodNameListForJsProxy，对象将只保留声明的函数，其他参数被清空
+                        </li>
+                        <li>函数透传：Web 把函数放入 args，鸿蒙侧主动执行该函数完成回调。</li>
+                    </ul>
+                </div>
+                <div class="result-panel">
+                    <div class="result-header">
+                        <h3>日志</h3>
+                        <button type="button" onclick="clearResult()">清空</button>
+                    </div>
+                    <pre id="result">等待操作...</pre>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script src="assets/bridge.js"></script>
+    <script>
+        function fun2() {
+            var result = call('JSBridgeUserService', 'fun2');
+            showResult(result);
+            if (result && typeof result.testFun === 'function') {
+                result.testFun('h5的toast')
+            }
+        }
+
+        function fun3() {
+            var result = call('JSBridgeUserService', 'fun3', function (str) {
+                showResult(str);
+            });
+            showResult(result);
+        }
+    </script>
+</body>
+
+</html>

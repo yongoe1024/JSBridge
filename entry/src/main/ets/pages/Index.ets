@@ -59,7 +59,12 @@ struct Index {
         .margin({ top: 8 })
       }
       .width('88%')
-      .padding({ left: 24, right: 24, top: 32, bottom: 32 })
+      .padding({
+        left: 24,
+        right: 24,
+        top: 32,
+        bottom: 32
+      })
       .backgroundColor('#F8FAFC')
       .borderRadius(28)
       .shadow({

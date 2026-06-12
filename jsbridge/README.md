@@ -3,6 +3,8 @@
 轻量级 JSBridge，使用装饰器完成映射，操作简单。  
 联系邮箱 121887765@qq.com
 
+> 当前版本 **2.0.0**，更新记录见 [`jsbridge/CHANGELOG.md`](./jsbridge/CHANGELOG.md)。
+
 ## 特性
 
 - 基于 `@JSBridgeService` 和 `@JSBridgeMethod` 装饰器完成服务与方法映射
@@ -22,6 +24,30 @@ OpenHarmony ohpm
 环境配置等更多内容，请参考[如何安装 OpenHarmony ohpm 包](https://ohpm.openharmony.cn/#/cn/help/downloadandinstall)
 
 [工程版本升级教程](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ide-integrated-project-migration)
+
+## 实现原理
+
+整体是一套「基于装饰器的轻量 RPC」：
+
+1. **声明期**：`@JSBridgeService` / `@JSBridgeMethod` 把元数据（`MetaData`：服务名 + 「H5 方法名 -> 真实方法名」映射）写入服务类的原型，挂在内部属性 `__meta__` 上。元数据采用 `hasOwnProperty` 安全读取，保证类被继承时各自拥有独立元数据。
+2. **注册期**：`JSBridgeManager.registerJSBridge(Service)` 读取该元数据，以 `serviceName` 为键登记一个**懒加载工厂**（首次被调用时才 `new` 出实例并缓存），并拒绝重复注册同名服务。
+3. **调用期**：H5 调用注入对象的 `callNative({service, method, args})`；`JSBridgeManager` 先按 `service` 取（或懒创建）服务实例，再经元数据把 H5 方法名解析为真实方法名，最后以**成员调用**形式执行 `service[method](entity)`。
+4. **返回**：同步方法返回 `H5Result`；异步方法返回 `Promise<H5Result>`，由 ArkWeb 代理为 H5 可用的 thenable。若返回对象中包含函数，则通过 `methodNameListForJsProxy` 声明，由 ArkWeb 暴露为 H5 可调用的函数代理。
+
+数据流向：
+
+```
+H5  App.callNative({service, method, args})
+        │
+        ▼
+JSBridgeManager.callNative
+   ├─ getInstance(service)               // 懒加载 + 缓存
+   ├─ MetaData.resolveMethod(method)      // 解析真实方法名
+   └─ service[realMethod](entity)        // 成员调用，保留 this
+        │
+        ▼
+   同步 → H5Result        异步 → Promise<H5Result>
+```
 
 ## 完整流程
 
@@ -109,6 +135,7 @@ struct WebViewPage {
 - `App` 是注入到 H5 的对象名，可按需替换
 - `callNative` 是暴露给 H5 的统一调用入口，不可修改
 - 同一个 `JSBridgeManager` 中不允许重复注册同名服务
+- `registerJSBridge` 返回 `boolean`：注册成功返回 `true`；缺少元数据（漏写 `@JSBridgeService`）或同名服务已存在时返回 `false`
 
 ### 3. H5 调用鸿蒙方法
 
@@ -176,6 +203,8 @@ App.callNative({
 
 如果返回对象中包含函数，需要通过 `methodNameListForJsProxy` 声明哪些字段是函数代理。
 
+> `methodNameListForJsProxy` 是 ArkWeb 运行时的**保留字段**：ArkWeb 在跨 JS 代理序列化返回值时，依据该列表把对应成员暴露为 H5 可调用的函数代理。该字段名由平台约定，**不可改名**，否则返回函数的能力会失效。
+
 ```ts
 @JSBridgeMethod()
 fun2(entity: H5Params): H5Result {
@@ -205,18 +234,32 @@ if (result && typeof result.testFun === 'function') {
 
 ### 6. 错误码说明
 
-`H5Code` 当前定义如下：
+`H5Code` 定义如下：
 
 ```ts
 export enum H5Code {
-  NOT_EXIST_METHOD = -2,
-  NOT_EXIST_SERVICE = -1,
-  SUCCESS = 0,
-  FAIL = 1,
+  SUCCESS = 200,          // 成功
+  FAIL = 500,             // 失败（业务失败 / 方法内部同步抛错）
+  NOT_EXIST_SERVICE = -1, // 服务不存在
+  NOT_EXIST_METHOD = -2,  // 方法不存在
 }
 ```
 
+| code | 含义 | 触发场景 |
+| --- | --- | --- |
+| `200` SUCCESS | 成功 | 业务方法正常返回 |
+| `500` FAIL | 失败 | 业务主动返回失败，或同步方法内部抛出异常被框架捕获 |
+| `-1` NOT_EXIST_SERVICE | 服务不存在 | `service` 未注册 |
+| `-2` NOT_EXIST_METHOD | 方法不存在 | 服务存在，但 `method` 未通过 `@JSBridgeMethod` 暴露 |
+
+**同步 vs 异步的错误处理路径不同**：
+
+- 同步方法内部**直接抛出异常** → 被框架的 `try/catch` 捕获 → 返回 `{ code: 500, msg: '执行失败' }`；
+- 异步方法返回的 `Promise` 若 `reject` → 错误对象**直达 H5 的 `.catch()`**，不会进入框架的 `try/catch`（框架仅同步返回 Promise 本身）。
+
 常见返回示例：
+
+服务不存在 / 方法不存在：
 
 ```json
 {
@@ -232,16 +275,16 @@ export enum H5Code {
 }
 ```
 
-同步执行过程中如果方法内部直接抛出异常，框架会返回：
+同步方法内部抛出异常（被框架捕获）：
 
 ```json
 {
-  "code": 1,
+  "code": 500,
   "msg": "执行失败"
 }
 ```
 
-异步方法返回 `Promise` 时，如果业务侧主动 `reject`，错误对象会直接进入 H5 的 `.catch()`，例如：
+异步方法 `reject`（错误直达 H5 的 `.catch()`）：
 
 ```js
 App.callNative({
@@ -253,8 +296,8 @@ App.callNative({
     console.log(error);
     // 例如:
     // {
-    //   code: 1,
-    //   data: '来自鸿蒙的异步函数，返回数据 Err'
+    //   code: 500,
+    //   msg: '鸿蒙侧执行失败'
     // }
 });
 ```

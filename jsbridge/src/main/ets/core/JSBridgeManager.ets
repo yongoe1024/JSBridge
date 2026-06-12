@@ -6,85 +6,107 @@ import { hilog } from "@kit.PerformanceAnalysisKit";
 
 const DOMAIN: number = 0x0000;
 const TAG: string = 'JSBridgeManager'
+const MSG_INVALID_PARAMS: string = '参数不合法'
+const MSG_NOT_EXIST_SERVICE: string = '服务不存在'
+const MSG_NOT_EXIST_METHOD: string = '方法不存在'
+const MSG_EXECUTE_FAIL: string = '执行失败'
 
-export class JSBridgeManager<T extends object> {
-  /**
-   * 全部服务
-   */
-  private serviceFactoryMap = new Map<string, () => T>();
-  /**
-   * 实例化的服务
-   */
-  private serviceMap = new Map<string, T>()
+interface ServiceEntry {
+  factory: () => object
+  meta: MetaData
+  instance?: object
+}
 
-  constructor() {
-  }
+export class JSBridgeManager {
+  private services: Map<string, ServiceEntry> = new Map()
 
   /**
-   * 注册函数
+   * 注册桥接服务。
+   * @param service 被 @JSBridgeService 装饰的服务类
+   * @returns 是否注册成功（缺少元数据或同名服务已存在时返回 false）
    */
-  public registerJSBridge(service: JSBridgeClass<T>): void {
-    const prototype: ESObject = service.prototype
-    if (prototype['__meta__']) {
-      const meta: MetaData = prototype['__meta__']
-      if (this.serviceFactoryMap.has(meta.serviceName)) {
-        hilog.error(DOMAIN, TAG, `禁止重复注册同名服务:${service.name}`);
-        return
-      }
-      this.serviceFactoryMap.set(meta.serviceName, () => new service());
-      hilog.debug(DOMAIN, TAG, `注册服务成功:${service.name}`);
-    } else {
-      hilog.error(DOMAIN, TAG, `注册服务失败:${service.name}`);
+  public registerJSBridge(service: JSBridgeClass): boolean {
+    const meta: MetaData | undefined = MetaData.read(service.prototype)
+    if (!meta) {
+      hilog.error(DOMAIN, TAG, `注册服务失败，未找到元数据(是否遗漏 @JSBridgeService?):${service.name}`);
+      return false
     }
+    if (!this.isValidName(meta.serviceName)) {
+      hilog.error(DOMAIN, TAG, `注册服务失败，服务名为空:${service.name}`);
+      return false
+    }
+    if (this.services.has(meta.serviceName)) {
+      hilog.error(DOMAIN, TAG, `禁止重复注册同名服务:${meta.serviceName}`);
+      return false
+    }
+    this.services.set(meta.serviceName, { factory: () => new service(), meta });
+    hilog.debug(DOMAIN, TAG, `注册服务成功:${meta.serviceName}`);
+    return true
   }
 
   /**
-   * H5调用Native方法入口
+   * H5 调用 Native 方法的统一入口（注入到 Web 的 callNative）。
+   * @param entity H5 请求参数（service / method / args）
+   * @returns 同步方法返回 H5Result；异步方法返回 Promise<H5Result>
    */
-  public callNative(entity: H5Params): H5Result {
-    let service: T | undefined = this.getService(entity.service)
-    if (!service) {
+  public callNative(entity: H5Params): H5Result | Promise<H5Result> {
+    if (!entity || !this.isValidName(entity.service) || !this.isValidName(entity.method)) {
+      hilog.debug(DOMAIN, TAG, `调用参数不合法`);
+      return this.createResult(H5Code.FAIL, MSG_INVALID_PARAMS)
+    }
+
+    const entry: ServiceEntry | undefined = this.services.get(entity.service)
+    if (!entry) {
       hilog.debug(DOMAIN, TAG, `调用服务不存在:${entity.service}:${entity.method}`);
-      return {
-        code: H5Code.NOT_EXIST_SERVICE,
-        msg: '服务不存在'
-      }
+      return this.createResult(H5Code.NOT_EXIST_SERVICE, MSG_NOT_EXIST_SERVICE)
     }
-    // 注册成功服务，一定会有元数据
-    let meta: MetaData = service.constructor.prototype['__meta__']
-    // 判断数组是否存在函数
-    let map = meta.h5NameToMethodName
-    if (!map[entity.method]) {
+
+    const realMethodName: string | undefined = entry.meta.resolveMethod(entity.method)
+    if (!realMethodName) {
       hilog.debug(DOMAIN, TAG, `调用方法不存在:${entity.service}:${entity.method}`);
-      return {
-        code: H5Code.NOT_EXIST_METHOD,
-        msg: '方法不存在'
-      }
+      return this.createResult(H5Code.NOT_EXIST_METHOD, MSG_NOT_EXIST_METHOD)
     }
+
     try {
       hilog.debug(DOMAIN, TAG, `调用函数:${entity.service}:${entity.method}`);
-      return service[map[entity.method]](entity)
+      const service: ESObject = this.getInstance(entry)
+      // 成员调用形式，保证 this 绑定到 service 实例。
+      // 同步方法直接返回 H5Result；异步方法返回 Promise<H5Result>，由 ArkWeb
+      // 代理成 H5 可用的 thenable。故这一行即可覆盖同步 / 异步两种情况。
+      // 注意：下方 try/catch 只能捕获同步抛出的异常；异步方法返回的 Promise 若
+      // reject，会直接透传到 H5 的 .catch()，不会进入此 catch 分支。
+      return service[realMethodName](entity)
     } catch (e) {
-      hilog.error(DOMAIN, TAG, `执行失败:${entity.service}:${entity.method}，${e.code + e.message}}`);
-      return {
-        code: H5Code.FAIL,
-        msg: '执行失败',
-      }
+      hilog.error(DOMAIN, TAG, `执行失败:${entity.service}:${entity.method}，${this.formatError(e)}`);
+      return this.createResult(H5Code.FAIL, MSG_EXECUTE_FAIL)
     }
   }
 
   /**
-   * 获取Service服务
+   * 获取服务实例：优先取缓存，未实例化则经工厂创建并缓存（懒加载）。
    */
-  private getService(name: string): T | undefined {
-    let service: T | undefined = this.serviceMap.get(name)
-    if (!service) {
-      let factory = this.serviceFactoryMap.get(name)
-      if (factory) {
-        service = factory();
-        this.serviceMap.set(name, service);
-      }
+  private getInstance(entry: ServiceEntry): object {
+    if (!entry.instance) {
+      entry.instance = entry.factory();
     }
-    return service;
+    return entry.instance;
+  }
+
+  private createResult(code: H5Code, msg: string): H5Result {
+    return {
+      code,
+      msg
+    }
+  }
+
+  private isValidName(value: string): boolean {
+    return typeof value === 'string' && value.length > 0
+  }
+
+  private formatError(error: ESObject): string {
+    if (error && error.message) {
+      return `${error.message}`
+    }
+    return `${error}`
   }
 }
