@@ -1,17 +1,31 @@
-# 版本记录
+# 更新日志
+
+本文件记录项目的重要变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## 2.0.0
 
-- 集中管理桥接元数据（`MetaData.read` / `MetaData.ensure`），消除装饰器与 Manager 中三处重复的 `__meta__` 硬编码，降低耦合
-- 元数据采用 `Object.prototype.hasOwnProperty` 安全读取，修复服务类被继承时子类沿原型链篡改父类元数据的潜在问题
-- 移除 `@JSBridgeMethod` 中无实际作用的方法包装，减少调用开销
-- `registerJSBridge` 返回 `boolean` 表示注册结果；`callNative` 保持成员调用 `service[method](entity)`，正确支持同步返回值与异步 `Promise`
-- 修正 `callNative` 返回类型为 `H5Result | Promise<H5Result>`，与「同步返回值 / 异步 Promise」的实际行为一致（此前仅声明为 `H5Result`）
-- 合并服务工厂表与实例缓存表为单一注册表，注册时即缓存元数据，`callNative` 不再经实例的 `constructor.prototype` 二次反查元数据
-- 移除 `JSBridgeManager` 上从未被使用的泛型参数 `T`，精简类型签名（`new JSBridgeManager()` 用法不变）
-- `H5Params.args` 改为可选（`args?`），与「调用可不带参数」的实际用法一致
-- 完善核心注释，明确「同步抛错」与「异步 reject」的不同处理路径；修正日志格式与误导性注释
-- `H5Result` 新增显式 `data` 字段；`H5Code` 重排声明顺序（取值不变）
-- 扩展 README：新增实现原理 / 架构、错误处理与错误码细化等章节
+### 新增
 
-## 1.0.0 初版
+- `H5Result` 新增显式 `data` 字段，用于承载业务返回数据。
+
+### 变更
+
+- `registerJSBridge` 现返回 `boolean`，指示服务是否注册成功（缺少元数据或服务名重复时返回 `false`）。
+- `H5Params.args` 改为可选参数，与「调用可不带参数」的实际用法一致。
+
+### 修复
+
+- 修正 `callNative` 的返回类型为 `H5Result | Promise<H5Result>`，准确反映同步返回值与异步 `Promise`（此前仅声明为 `H5Result`）。
+- 修复服务类被继承时，子类会沿原型链篡改父类元数据的问题（改为仅读取自有元数据）。
+
+### 移除
+
+- 移除 `JSBridgeManager` 上从未使用的泛型参数 `T`，精简类型签名（`new JSBridgeManager()` 用法不变）。
+
+### 文档
+
+- 重写 README：补充安装、用法、错误码与 API 参考。
+
+## 1.0.0
+
+- 首次发布。
